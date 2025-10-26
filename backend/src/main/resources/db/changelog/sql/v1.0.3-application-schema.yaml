@@ -1,0 +1,416 @@
+databaseChangeLog:
+  # ========================================
+  # Table: chat
+  # ========================================
+  - changeSet:
+      id: 1.0.3-create-chat-table
+      author: RafaelTomazGraciano
+      comment: Table of chats
+      changes:
+        - createTable:
+            tableName: chat
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_chat_user
+                    references: user(id)
+                    deleteCascade: true
+              - column:
+                  name: title
+                  type: VARCHAR(255)
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: is_deleted
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+
+        - createIndex:
+            indexName: idx_chat_user_id
+            tableName: chat
+            columns:
+              - column:
+                  name: user_id
+
+        - createIndex:
+            indexName: idx_chat_created_at
+            tableName: chat
+            columns:
+              - column:
+                  name: created_at
+
+      rollback:
+        - dropTable:
+            tableName: chat
+
+  # ========================================
+  # Table: message
+  # ========================================
+  - changeSet:
+      id: 1.0.3-create-message-table
+      author: RafaelTomazGraciano
+      comment: Table of messages inside chats
+      changes:
+        - createTable:
+            tableName: message
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: chat_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_message_chat
+                    references: chat(id)
+                    deleteCascade: true
+              - column:
+                  name: role
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: content
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: tokens_used
+                  type: INTEGER
+              - column:
+                  name: llm_model
+                  type: VARCHAR(50)
+              - column:
+                  name: processing_time_ms
+                  type: INTEGER
+
+        - createIndex:
+            indexName: idx_message_chat_id
+            tableName: message
+            columns:
+              - column:
+                  name: chat_id
+
+        - createIndex:
+            indexName: idx_message_created_at
+            tableName: message
+            columns:
+              - column:
+                  name: created_at
+
+      rollback:
+        - dropTable:
+            tableName: message
+
+  # ========================================
+  # Table: file
+  # ========================================
+  - changeSet:
+      id: 1.0.3-create-file-table
+      author: RafaelTomazGraciano
+      comment: Table of files uploaded by user
+      changes:
+        - createTable:
+            tableName: file
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: chat_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_file_chat
+                    references: chat(id)
+                    deleteCascade: true
+              - column:
+                  name: file_name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: file_type
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: file_size
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: file_path
+                  type: VARCHAR(500)
+              - column:
+                  name: extracted_text
+                  type: TEXT
+              - column:
+                  name: page_count
+                  type: INTEGER
+              - column:
+                  name: word_count
+                  type: INTEGER
+              - column:
+                  name: language
+                  type: VARCHAR(10)
+              - column:
+                  name: processing_status
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: error_message
+                  type: TEXT
+              - column:
+                  name: uploaded_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: processed_at
+                  type: TIMESTAMP
+              - column:
+                  name: metadata
+                  type: JSONB
+
+        - createIndex:
+            indexName: idx_file_chat_id
+            tableName: file
+            columns:
+              - column:
+                  name: chat_id
+
+        - createIndex:
+            indexName: idx_file_processing_status
+            tableName: file
+            columns:
+              - column:
+                  name: processing_status
+
+      rollback:
+        - dropTable:
+            tableName: file
+
+  # ========================================
+  # Table: chunk (with PGVECTOR)
+  # ========================================
+  - changeSet:
+      id: 1.0.3-create-chunk-table
+      author: RafaelTomazGraciano
+      comment: Table of chunks with embeddings for RAG
+      changes:
+        - createTable:
+            tableName: chunk
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: file_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_chunk_file
+                    references: file(id)
+                    deleteCascade: true
+              - column:
+                  name: content
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: chunk_index
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+              - column:
+                  name: start_position
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+              - column:
+                  name: end_position
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+              - column:
+                  name: token_count
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+              - column:
+                  name: embedding_model
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: semantic_score
+                  type: FLOAT
+              - column:
+                  name: page_number
+                  type: INTEGER
+              - column:
+                  name: section_title
+                  type: VARCHAR(255)
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+
+        - createIndex:
+            indexName: idx_chunk_file_id
+            tableName: chunk
+            columns:
+              - column:
+                  name: file_id
+
+        - createIndex:
+            indexName: idx_chunk_chunk_index
+            tableName: chunk
+            columns:
+              - column:
+                  name: chunk_index
+
+      rollback:
+        - dropTable:
+            tableName: chunk
+
+  # ========================================
+  # ADD COLUMN EMBEDDING (VECTOR)
+  # ========================================
+  - changeSet:
+      id: 1.0.3-add-embedding-column
+      author: RafaelTomazGraciano
+      comment: Add column of embedding (pgvector) to chunk table
+      changes:
+        - sql:
+            sql: ALTER TABLE chunk ADD COLUMN embedding vector(768) NOT NULL;
+      rollback:
+        - sql:
+            sql: ALTER TABLE chunk DROP COLUMN embedding;
+
+  # ========================================
+  # VECTOR INDEX FOR SEMANTIC SEARCH
+  # ========================================
+  - changeSet:
+      id: 1.0.3-create-vector-index
+      author: RafaelTomazGraciano
+      comment: Create IVFFLAT index for vector search
+      changes:
+        - sql:
+            sql: |
+              CREATE INDEX idx_chunk_embedding_cosine 
+              ON chunk 
+              USING ivfflat (embedding vector_cosine_ops) 
+              WITH (lists = 100);
+      rollback:
+        - sql:
+            sql: DROP INDEX IF EXISTS idx_chunk_embedding_cosine;
+
+  # ========================================
+  # Table: message_source
+  # ========================================
+  - changeSet:
+      id: 1.0.3-create-message-source-table
+      author: RafaelTomazGraciano
+      comment: Relationship table between messages and chunks (citations)
+      changes:
+        - createTable:
+            tableName: message_source
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: message_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_message_source_message
+                    references: message(id)
+                    deleteCascade: true
+              - column:
+                  name: chunk_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_message_source_chunk
+                    references: chunk(id)
+                    deleteCascade: true
+              - column:
+                  name: relevance_score
+                  type: FLOAT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: was_cited
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+              - column:
+                  name: citation_text
+                  type: TEXT
+
+        - createIndex:
+            indexName: idx_message_source_message_id
+            tableName: message_source
+            columns:
+              - column:
+                  name: message_id
+
+        - createIndex:
+            indexName: idx_message_source_chunk_id
+            tableName: message_source
+            columns:
+              - column:
+                  name: chunk_id
+      
+      rollback:
+        - dropTable:
+            tableName: message_source
