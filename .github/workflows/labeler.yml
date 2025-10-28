@@ -1,0 +1,22 @@
+backend:
+  - backend/**
+
+tests:
+  - backend/src/test/**
+
+documentation:
+  - '**/*.md'
+  - docs/**
+
+dependencies:
+  - backend/build.gradle.kts
+  - backend/gradle/**
+
+security:
+  - backend/**/SecurityConfig.java
+  - backend/**/OAuth2*.java
+
+database:
+  - backend/**/entity/**
+  - backend/**/repository/**
+  - backend/src/main/resources/db/**
